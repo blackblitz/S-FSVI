@@ -230,10 +230,13 @@ class Objectives_hk:
         :return:
             cross entropy loss, a scalar.
         """
-        log_preds_y_samples = jax.ops.index_update(
-            jnp.zeros_like(preds_f_samples),
-            jax.ops.index[:, :, min_dim:max_dim],
-            jax.nn.log_softmax(preds_f_samples[:, :, min_dim:max_dim], axis=-1),
+        log_preds_y_samples = jnp.zeros_like(
+            preds_f_samples
+        ).at[:, :, min_dim:max_dim].set(
+            jax.nn.log_softmax(
+                preds_f_samples[:, :, min_dim:max_dim],
+                axis=-1
+            )
         )
         # Targets is broadcasted in the MC sample dimension.
         log_likelihood = jnp.mean(

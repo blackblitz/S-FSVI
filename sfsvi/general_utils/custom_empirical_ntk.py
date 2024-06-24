@@ -15,25 +15,26 @@ from typing import Optional
 
 import jax.numpy as np
 import tree
-from jax.api import _std_basis
-from jax.api import _unravel_array_into_pytree
-from jax.api import eval_shape
-from jax.api import jacobian
-from jax.api import jvp
-from jax.api import linear_transpose
-from jax.api import vjp
-from jax.api import vmap
+from jax._src.api import _std_basis
+from jax._src.api import _unravel_array_into_pytree
+from jax._src.api import eval_shape
+from jax._src.api import jacobian
+from jax._src.api import jvp
+from jax._src.api import linear_transpose
+from jax._src.api import vjp
+from jax._src.api import vmap
 from jax.tree_util import tree_flatten
 from jax.tree_util import tree_map
-from jax.tree_util import tree_multimap
 from jax.tree_util import tree_reduce
 from jax.tree_util import tree_unflatten
-from neural_tangents.utils import utils
-from neural_tangents.utils.typing import ApplyFn
-from neural_tangents.utils.typing import Axes
-from neural_tangents.utils.typing import NTTree
-from neural_tangents.utils.typing import PyTree
-from neural_tangents.utils.typing import VMapAxes
+from neural_tangents._src.empirical import _get_res_batch_dims
+from neural_tangents._src.stax.requirements import _get_masked_array
+from neural_tangents._src.utils import utils
+from neural_tangents._src.utils.typing import ApplyFn
+from neural_tangents._src.utils.typing import Axes
+from neural_tangents._src.utils.typing import NTTree
+from neural_tangents._src.utils.typing import PyTree
+from neural_tangents._src.utils.typing import VMapAxes
 
 
 def empirical_ntk_fn(f: ApplyFn,
@@ -244,7 +245,7 @@ def _empirical_implicit_ntk_fn(f: ApplyFn,
             fx1, fx2 = eval_shape(f1, params), eval_shape(f2, params)
             eye = _std_basis(fx1)
             ntk = vmap(linear_transpose(delta_vjp_jvp, fx2))(eye)
-            ntk = tree_map(lambda fx12: _unravel_array_into_pytree(fx1, 0, fx12), ntk)
+            ntk = tree_map(lambda fx12: _unravel_array_into_pytree(fx1, 0, None, fx12), ntk)
             ntk = _diagonal(ntk, fx1)
             return ntk
 
@@ -290,7 +291,7 @@ def _empirical_direct_ntk_fn(f: ApplyFn,
             contract_axes = _trace_axes + param_axes
             return utils.dot_general(x, y, contract_axes, _diagonal_axes) / size
 
-        return tree_reduce(operator.add, tree_multimap(contract, j1, j2))
+        return tree_reduce(operator.add, tree_map(contract, j1, j2))
 
     def ntk_fn(x1: NTTree[np.ndarray],
                x2: Optional[NTTree[np.ndarray]],
@@ -397,7 +398,7 @@ def _trace_and_diagonal(ntk: np.ndarray,
         ntk = np.diagonal(ntk, axis1=axis1, axis2=axis2)
 
     ntk = utils.zip_axes(ntk, 0, ntk.ndim - n_diag)
-    res_diagonal_axes = utils.get_res_batch_dims(trace_axes, diagonal_axes)
+    res_diagonal_axes = _get_res_batch_dims(trace_axes, diagonal_axes)
     ntk = np.moveaxis(ntk, range(-n_diag, 0), res_diagonal_axes)
     return ntk / contract_size
 
@@ -412,7 +413,7 @@ def _get_f_params(f, x, x_axis, fx_axis, kw_axes, **apply_fn_kwargs):
 
     def _f(p):
         fx = f(p, x, **apply_fn_kwargs)
-        fx = utils.get_masked_array(fx)
+        fx = _get_masked_array(fx)
         # TODO(romann): normalize properly if output is masked.
 
         get_masked = utils.nt_tree_fn()(lambda o: o.masked_value)
@@ -425,21 +426,21 @@ def _get_f_params(f, x, x_axis, fx_axis, kw_axes, **apply_fn_kwargs):
 def _expand_dims(x, axis):
     if axis is None or x is None:
         return x
-    return tree_multimap(np.expand_dims, x, axis)
+    return tree_map(np.expand_dims, x, axis)
 
 
 def _add(x, y):
     if x is None or y is None:
         return None
-    return tree_multimap(operator.add, x, y)
+    return tree_map(operator.add, x, y)
 
 
 def _squeeze(x, axis, take=False):
     if axis is None:
         return x
     if take:
-        return tree_multimap(lambda x, axis: np.take(x, 0, axis), x, axis)
-    return tree_multimap(np.squeeze, x, axis)
+        return tree_map(lambda x, axis: np.take(x, 0, axis), x, axis)
+    return tree_map(np.squeeze, x, axis)
 
 
 @utils.nt_tree_fn()
@@ -448,7 +449,7 @@ def _ndim(x):
 
 
 def _mod(x, y):
-    return tree_multimap(operator.mod, x, y)
+    return tree_map(operator.mod, x, y)
 
 
 def _diagonal(ntk, fx):

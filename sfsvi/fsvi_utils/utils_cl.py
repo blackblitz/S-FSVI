@@ -238,9 +238,10 @@ def generate_4d_identity_cov(a: int, b: int) -> jnp.ndarray:
 					[j, :, j, :] is an identity matrix.
 	"""
 	return jnp.stack(
-		jnp.stack(jnp.eye(a * b).split(a, 0)).split(a, 2)).transpose(
-		(0, 2, 1, 3)
-	)
+		jnp.split(jnp.stack(
+            jnp.split(jnp.eye(a * b), a, axis=0)
+        ), a, axis=2)
+    ).transpose((0, 2, 1, 3))
 
 
 def initialize_random_keys(seed: int) -> KeyHelper:
@@ -298,7 +299,7 @@ def sigma_transform(params_log_var: hk.Params) -> hk.Params:
 	return tree.map_structure(lambda p: jnp.exp(p), params_log_var)
 
 
-@partial(jit, static_argnums=(4,))
+@jit
 def kl_diag(
 	mean_q: jnp.ndarray,
 	mean_p: jnp.ndarray,

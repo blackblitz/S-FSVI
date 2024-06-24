@@ -2,7 +2,7 @@ import os
 
 from benchmarking.benchmark_args import NOT_SPECIFIED
 
-os.environ["XLA_FLAGS"] = os.environ.get("XLA_FLAGS", "") + " --xla_gpu_deterministic_reductions"
+os.environ["XLA_FLAGS"] = os.environ.get("XLA_FLAGS", "") + " --xla_gpu_deterministic_ops=true"
 os.environ["TF_CUDNN_DETERMINISTIC"] = "1"
 os.environ['PYTHONHASHSEED']=str(0)
 os.environ["TF_DETERMINISTIC_OPS"] = "1"

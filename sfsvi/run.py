@@ -3,7 +3,7 @@ import os
 from benchmarking.benchmark_args import NOT_SPECIFIED
 from sfsvi.fsvi_utils.sfsvi_args_v2 import fsvi_v1_to_v2
 
-os.environ["XLA_FLAGS"] = os.environ.get("XLA_FLAGS", "") + " --xla_gpu_deterministic_reductions"
+os.environ["XLA_FLAGS"] = os.environ.get("XLA_FLAGS", "") + " --xla_gpu_deterministic_ops=true"
 os.environ["TF_CUDNN_DETERMINISTIC"] = "1"
 os.environ['PYTHONHASHSEED']=str(0)
 os.environ["TF_DETERMINISTIC_OPS"] = "1"
