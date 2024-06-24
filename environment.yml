@@ -12,7 +12,7 @@ channels:
 - anaconda
 - pytorch
 dependencies:
-- python==3.9
+- python==3.10
 - pillow
 - pip==24.0
 - psutil
